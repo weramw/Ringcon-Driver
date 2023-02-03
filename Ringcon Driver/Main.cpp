@@ -2203,7 +2203,7 @@ wxString glGetwxString(GLenum name) {
 
 //int main(int argc, char *argv[]) {
 int wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR cmdLine, int cmdShow) {
-	parseSettings2();
+	//parseSettings2();
 	wxEntry(hInstance);
 	return 0;
 }
