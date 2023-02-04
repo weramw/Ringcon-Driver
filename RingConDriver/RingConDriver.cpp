@@ -26,11 +26,24 @@ int main()
         return 1;
     }
     
+    double connect_rate = 1; // in Hz
+    DWORD connectSleepDuration = DWORD(1 / connect_rate * 1000);
+
+
     double rate = 10; // in Hz
     DWORD sleepDuration = DWORD(1 / rate * 1000);
+
     Driver driver;
 
-    driver.connect();
+    while (running && !driver.is_connected()) {
+        driver.connect();
+        Sleep(connectSleepDuration);
+    }
+
+    if (driver.is_connected())
+    {
+        std::cout << "Connected to left and right JoyCon!" << std::endl;
+    }
 
     while (running) { 
         driver.update();
