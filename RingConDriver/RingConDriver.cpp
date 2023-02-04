@@ -2,6 +2,7 @@
 //
 
 #include <iostream>
+#include <chrono>
 
 #include <Windows.h>
 
@@ -30,7 +31,7 @@ int main()
     DWORD connectSleepDuration = DWORD(1 / connect_rate * 1000);
 
 
-    double rate = 10; // in Hz
+    double rate = 100; // in Hz
     DWORD sleepDuration = DWORD(1 / rate * 1000);
 
     Driver driver;
@@ -46,8 +47,17 @@ int main()
     }
 
     while (running) { 
+        std::chrono::steady_clock::time_point time_start = std::chrono::high_resolution_clock::now();
         driver.update();
-        Sleep(sleepDuration);
+        std::chrono::steady_clock::time_point time_stop = std::chrono::high_resolution_clock::now();
+
+        std::chrono::microseconds update_duration = std::chrono::duration_cast<std::chrono::microseconds>(time_stop - time_start);
+        double update_duration_ms = update_duration.count() / 1000.0;
+
+        DWORD sleep_ms = DWORD(sleepDuration > update_duration_ms ? sleepDuration - update_duration_ms : 0);
+
+        Sleep(sleep_ms);
+
     }
 
     driver.disconnect();

@@ -72,6 +72,13 @@ void Driver::disconnect()
 
 void Driver::update()
 {
+	if (_joycon_right != nullptr) {
+		_joycon_right->update();
+	}
+	if (_joycon_left != nullptr) {
+		_joycon_left->update();
+	}
+
 	std::cout << "." << std::flush;
 
 }
