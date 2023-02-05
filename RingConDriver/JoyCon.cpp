@@ -1,6 +1,10 @@
 #include "JoyCon.h"
 
 #include <iostream>
+//#include <algorithm>
+
+#define NOMINMAX // prevent windows interfering with c++ min max
+#include <Windows.h>
 
 const uint8_t JoyCon::_mcu_crc8_table[256] = {
 0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15, 0x38, 0x3F, 0x36, 0x31, 0x24, 0x23, 0x2A, 0x2D,
@@ -139,8 +143,14 @@ void JoyCon::initialize()
 	//GetCalibrationData();
 
 	std::cout << "Setting LEDs..." << std::endl;
-	std::array<LIGHT, 4> light_modes = {SOLID, OFF, OFF, OFF}; // 1 to 4
+	std::array<LIGHT, 4> light_modes = {LIGHT_SOLID, LIGHT_OFF, LIGHT_OFF, LIGHT_OFF}; // 1 to 4
 	setPlayerLED(light_modes);
+
+	// Small Rumble:
+	std::cout << "Vibrating JoyCon..." << std::endl;
+	rumble(100, RUMBLE_HIGH);
+	Sleep(20);
+	rumble(1, RUMBLE_OFF);
 }
 
 void JoyCon::setPlayerLED(std::array<LIGHT, 4> values)
@@ -155,9 +165,24 @@ void JoyCon::setPlayerLED(std::array<LIGHT, 4> values)
 
 	//std::cout << "data: " << int(data[0]) << std::endl;
 
-	for (size_t i = 0; i < 5; ++i){
-		sendSubCommand(0x01, 0x30, data);
-	}
+	sendSubCommand(0x01, 0x30, data);
+}
+
+void JoyCon::rumble(uint8_t frequency, RUMBLE_INTENSITY intensity)
+{
+	int offset = _type == LEFT ? 0 : 4;
+	int intensity_int = static_cast<int>(intensity);
+	
+	std::vector<uint8_t> data(9,0);
+
+	data[1 + offset] = frequency;
+	data[1 + offset + intensity_int] = 1;
+
+	hid_set_nonblocking(_handle, 1);
+
+	sendCommand(0x10, data);
+	
+	hid_set_nonblocking(_handle, 0);
 }
 
 void JoyCon::update(bool verbose)
@@ -182,33 +207,6 @@ void JoyCon::update(bool verbose)
 	//parseData(data);
 	if (verbose) {
 		// TODO: print data
-	}
-}
-
-void JoyCon::parseData(const std::vector<uint8_t>& data)
-{
-	// TOOD: parse data
-
-	std::cout << "data[0]: " << int(data[0]) << std::endl;
-
-	switch (data[0]) {
-	case 0x3F:
-		std::cout << "BT button pressed" << std::endl;
-		break;
-	case 0x21:
-		std::cout << "buttons presses only" << std::endl;
-		break;
-	case 0x30:
-		std::cout << "IMU" << std::endl;
-		break;
-	case 0x31:
-		std::cout << "NFC" << std::endl;
-		break;
-	case 0x32:
-		std::cout << "?" << std::endl;
-		break;
-	default:
-		std::cout << "? data type: " << data[0] << std::endl;
 	}
 }
 
@@ -284,86 +282,32 @@ bool JoyCon::sendSubCommand(uint8_t command, uint8_t subcommand, const std::vect
 	return sendCommand(command, buffer);
 }
 
-//void send_subcommand(int command, int subcommand, uint8_t* data, int len) {
-//	unsigned char buf[0x40];
-//	memset(buf, 0, 0x40);
-//
-//	uint8_t rumble_base[9] = { (++global_count) & 0xF, 0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40 };
-//	memcpy(buf, rumble_base, 9);
-//
-//	if (global_count > 0xF) {
-//		global_count = 0x0;
-//	}
-//
-//	// set neutral rumble base only if the command is vibrate (0x01)
-//	// if set when other commands are set, might cause the command to be misread and not executed
-//	//if (subcommand == 0x01) {
-//	//	uint8_t rumble_base[9] = { (++global_count) & 0xF, 0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40 };
-//	//	memcpy(buf + 10, rumble_base, 9);
-//	//}
-//
-//	buf[9] = subcommand;
-//	if (data && len != 0) {
-//		memcpy(buf + 10, data, len);
-//	}
-//
-//	send_command(command, buf, 10 + len);
-//
-//	if (data) {
-//		memcpy(data, buf, 0x40); //TODO
-//	}
-//}
+void JoyCon::parseData(const std::vector<uint8_t>& data)
+{
+	// TOOD: parse data
 
+	std::cout << "data[0]: " << int(data[0]) << std::endl;
 
-//void send_command(int command, uint8_t* data, int len) {
-//	unsigned char buf[0x40];
-//	memset(buf, 0, 0x40);
-//
-//	if (!bluetooth) {
-//		buf[0x00] = 0x80;
-//		buf[0x01] = 0x92;
-//		buf[0x03] = 0x31;
-//	}
-//
-//	buf[bluetooth ? 0x0 : 0x8] = command;
-//	if (data != nullptr && len != 0) {
-//		memcpy(buf + (bluetooth ? 0x1 : 0x9), data, len);
-//	}
-//
-//	hid_exchange(this->handle, buf, len + (bluetooth ? 0x1 : 0x9));
-//
-//	if (data) {
-//		memcpy(data, buf, 0x40);
-//	}
-//}
-
-
-//void hid_exchange(hid_device* handle, unsigned char* buf, int len) {
-//	if (!handle) return;
-//
-//	int res;
-//
-//	res = hid_write(handle, buf, len);
-//
-//	//if (res < 0) {
-//	//	printf("Number of bytes written was < 0!\n");
-//	//} else {
-//	//	printf("%d bytes written.\n", res);
-//	//}
-//
-//	//// set non-blocking:
-//	//hid_set_nonblocking(handle, 1);
-//
-//	res = hid_read(handle, buf, 0x40);
-//
-//	//if (res < 1) {
-//	//	printf("Number of bytes read was < 1!\n");
-//	//} else {
-//	//	printf("%d bytes read.\n", res);
-//	//}
-//}
-
-
+	switch (data[0]) {
+	case 0x3F:
+		std::cout << "BT button pressed" << std::endl;
+		break;
+	case 0x21:
+		std::cout << "buttons presses only" << std::endl;
+		break;
+	case 0x30:
+		std::cout << "IMU" << std::endl;
+		break;
+	case 0x31:
+		std::cout << "NFC" << std::endl;
+		break;
+	case 0x32:
+		std::cout << "?" << std::endl;
+		break;
+	default:
+		std::cout << "? data type: " << data[0] << std::endl;
+	}
+}
 
 
 //// input update packet:

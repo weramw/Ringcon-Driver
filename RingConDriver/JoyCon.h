@@ -19,9 +19,15 @@ public:
 	};
 
 	enum LIGHT {
-		OFF=0x0,
-		FLASH=0x10,
-		SOLID=0x1
+		LIGHT_OFF=0x0,
+		LIGHT_FLASH=0x10,
+		LIGHT_SOLID=0x1
+	};
+
+	enum RUMBLE_INTENSITY {
+		RUMBLE_HIGH = 1,
+		RUMBLE_LOW = 2,
+		RUMBLE_OFF = 3
 	};
 
 	JoyCon(hid_device_info* dev_info); //opens handle
@@ -34,6 +40,7 @@ public:
 	std::string getStringForType() const;
 
 	void setPlayerLED(std::array<LIGHT, 4> values);
+	void rumble(uint8_t frequency, RUMBLE_INTENSITY intensity);
 
 protected:
 	static const uint8_t _mcu_crc8_table[256];
