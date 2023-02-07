@@ -9,6 +9,8 @@
 
 #include <Eigen/Core>
 
+#include "Calibration.h"
+
 class JoyCon
 {
 public:
@@ -75,6 +77,7 @@ protected:
 
 protected:
 	hid_device* _handle;
+	Calibration* _calibration;
 
 	wchar_t* _serial;
 	std::string _name;
@@ -86,6 +89,10 @@ protected:
 	int _read_timeout;
 
 	uint8_t _global_count; // TODO: check what this does...
+
+	uint16_t _stick_x;
+	uint16_t _stick_y;
+	//uint8_t _battery;
 
 	Eigen::Vector3f _gyro;
 	Eigen::Vector3f _accel;

@@ -73,6 +73,7 @@ uint8_t JoyCon::ringmcu_crc8_calc(uint8_t* buffer, uint8_t size) const {
 
 JoyCon::JoyCon(hid_device_info* dev_info) :
 	_handle(nullptr),
+	_calibration(nullptr),
 	_serial(nullptr),
 	_name("UNKOWN"),
 	_type(UNKOWN),
@@ -80,6 +81,9 @@ JoyCon::JoyCon(hid_device_info* dev_info) :
 	_ringcon(0x0A), //Ringcon data. Packet[40]. Fully pulled = 0x00, rest = 0x0a, fully pushed = 0x14.
 	_read_timeout(3),
 	_global_count(0), // TODO: ???
+	_stick_x(0),
+	_stick_y(0),
+	//_battery(0),
 	_accel(Eigen::Vector3f::Zero()),
 	_gyro(Eigen::Vector3f::Zero())
 {	
@@ -96,6 +100,10 @@ JoyCon::JoyCon(hid_device_info* dev_info) :
 		printf("Found %s: %ls %s\n", _name.c_str(), _serial, dev_info->path);
 	}
 
+	if (_type == UNKOWN) {
+		return;
+	}
+
 	_handle = hid_open_path(dev_info->path);
 	if (_handle == nullptr) {
 		printf("Could not open %s with serial %ls\n", _name.c_str(), _serial); // , strerror_s(errno));
@@ -104,15 +112,24 @@ JoyCon::JoyCon(hid_device_info* dev_info) :
 
 	printf("Successfully opened device: %s\n", _name.c_str());
 
+	if (_type == UNKOWN) {
+		// do not initialize or load calibration if not left or right JoyCon
+		return;
+	}
+
 	// init device
 	initialize();
-}
+
+	}
 
 JoyCon::~JoyCon()
 {
 	if (_handle != nullptr) {
 		hid_close(_handle);
 		printf("Closed device: %s\n", _name.c_str());
+	}
+	if (_calibration != nullptr) {
+		delete _calibration;
 	}
 }
 
@@ -150,8 +167,9 @@ void JoyCon::initialize()
 	buffer[0] = 0x30; //REPORT_MODE_NPAD_STANDARD
 	sendSubCommand(0x01, 0x03, buffer);
 
-	// TODO:
-	//GetCalibrationData();
+	// get calibration data
+	bool is_left = (_type == LEFT);
+	_calibration = new Calibration(_handle, is_left);
 
 	std::cout << "Setting LEDs..." << std::endl;
 	std::array<LIGHT, 4> light_modes = {LIGHT_SOLID, LIGHT_OFF, LIGHT_OFF, LIGHT_OFF}; // 1 to 4
@@ -217,12 +235,23 @@ void JoyCon::update(bool verbose)
 
 	parseData(data);
 	if (verbose) {
+		if (_type == LEFT) {
+			std::cout << "l" << std::flush;
+		} else if (_type == RIGHT) {
+			std::cout << "r" << std::flush;
+		}
+		else {
+			std::cout << "x" << std::flush;
+		}
 		// TODO: print data
 		//std::cout << _name << " - Accel: " << _accel.transpose() << std::endl;
 		//std::cout << _name << " - Gyro: " << _gyro.transpose() << std::endl;
 		//if (_type == RIGHT) {
 		//	std::cout << _name << ": " << getButtonsStateAsString() << std::endl;
 		//}
+		float x_cal, y_cal;
+		_calibration->stick(_stick_x, _stick_y, x_cal, y_cal);
+		std::cout << std::endl << _name << ": X " << _stick_x << "(" << x_cal << ")" << "\t Y " << _stick_y << "(" << y_cal << ")" << std::endl; // "\t BAT: " << static_cast<int>(_battery) << std::endl;
 	}
 }
 
@@ -302,7 +331,7 @@ void JoyCon::parseData(const std::vector<uint8_t>& data)
 {
 	// TOOD: parse data
 
-	std::cout << "data[0]: " << int(data[0]) << std::endl;
+	//std::cout << "data[0]: " << int(data[0]) << std::endl;
 
 	switch (data[0]) {
 	case 0x3F:
@@ -318,24 +347,25 @@ void JoyCon::parseData(const std::vector<uint8_t>& data)
 		//std::cout << "NFC" << std::endl;
 		//break;
 	case 0x32:
-		//std::cout << "?" << std::endl;
-		//break;
+		//std::cout << "?" << std::endl;		
 		parseDataWithIMU(data);
+		break;
 	default:
-		std::cout << "? data type: " << data[0] << std::endl;
+		//std::cout << "? data type: " << data[0] << std::endl;
+		std::cout << "?(" << data[0] << ")" << std::flush;
 	}
 }
 
 void JoyCon::parseDataWithIMU(const std::vector<uint8_t>& data)
 {
-	int stick_data_offset = _bluetooth_data_offset + getStickDataOffset();
-	
-	uint16_t stick_x = data[stick_data_offset + 0] | ((data[stick_data_offset + 1] & 0xF) << 8);
-	uint16_t stick_y = (data[stick_data_offset + 1] >> 4) | (data[stick_data_offset + 2] << 4);
-	uint8_t	battery = (data[stick_data_offset + 1] & 0xF0) >> 4;
-	
 	parseButtonsState(data);
 
+	int stick_data_offset = _bluetooth_data_offset + getStickDataOffset();
+	
+	_stick_x = data[stick_data_offset + 0] | ((data[stick_data_offset + 1] & 0xF) << 8);
+	_stick_y = (data[stick_data_offset + 1] >> 4) | (data[stick_data_offset + 2] << 4);
+	//_battery = (data[stick_data_offset + 1] & 0xF0) >> 4;
+	
 	//	jc->CalcAnalogStick(); // apply calib
 
 	// accel (m/s^2):
@@ -354,8 +384,5 @@ void JoyCon::parseDataWithIMU(const std::vector<uint8_t>& data)
 	//		jc->gyro.roll -= jc->gyro.offset.roll;
 	//		jc->gyro.pitch -= jc->gyro.offset.pitch;
 	//		jc->gyro.yaw -= jc->gyro.offset.yaw;
-
-	
-
 }
 

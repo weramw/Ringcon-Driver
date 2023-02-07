@@ -14,7 +14,8 @@ Driver::Driver() :
 
 bool Driver::is_connected() const
 {
-	return (_joycon_left != nullptr) && (_joycon_right != nullptr);
+	//return (_joycon_left != nullptr) && (_joycon_right != nullptr);
+	return (_joycon_left != nullptr);
 }
 
 void Driver::connect()
