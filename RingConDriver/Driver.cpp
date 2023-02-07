@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "JoyConLeft.h"
+#include "JoyConRight.h"
 
 Driver::Driver() :
 	_joycon_left(nullptr),
@@ -31,13 +33,13 @@ void Driver::connect()
 		case JoyCon::PRODUCT_ID_LEFT:
 			if (_joycon_left == nullptr) {
 				std::cout << "Found left Joycon" << std::endl;
-				_joycon_left = new JoyCon(cur_dev);
+				_joycon_left = new JoyConLeft(cur_dev);
 			}
 			break;
 		case JoyCon::PRODUCT_ID_RIGHT:
 			if (_joycon_right == nullptr) {
 				std::cout << "Found right Joycon" << std::endl;
-				_joycon_right = new JoyCon(cur_dev);
+				_joycon_right = new JoyConRight(cur_dev);
 			}
 			break;
 		default:

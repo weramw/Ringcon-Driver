@@ -47,6 +47,7 @@ public:
 	void rumble(uint8_t frequency, RUMBLE_INTENSITY intensity);
 
 protected:
+	static const int _bluetooth_data_offset;
 	static const uint8_t _mcu_crc8_table[256];
 	static const uint8_t _ringmcu_crc8_table[256];
 
@@ -65,6 +66,10 @@ protected:
 	void parseData(const std::vector<uint8_t>& data);
 
 	void parseDataWithIMU(const std::vector<uint8_t>& data);
+
+	virtual void parseButtonsState(const std::vector<uint8_t>& data) = 0;
+	virtual int getStickDataOffset() const = 0;
+	virtual std::string getButtonsStateAsString() const = 0;
 
 	void initialize();
 
