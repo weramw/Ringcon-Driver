@@ -31,7 +31,8 @@ int main()
     DWORD connectSleepDuration = DWORD(1 / connect_rate * 1000);
 
 
-    double rate = 100; // in Hz
+    //double rate = 100; // in Hz
+    double rate = 5; // in Hz
     DWORD sleepDuration = DWORD(1 / rate * 1000);
 
     Driver driver;

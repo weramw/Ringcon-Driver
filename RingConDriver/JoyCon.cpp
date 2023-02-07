@@ -6,6 +6,8 @@
 #define NOMINMAX // prevent windows interfering with c++ min max
 #include <Windows.h>
 
+#include "ByteConversions.h"
+
 const int JoyCon::_bluetooth_data_offset = 0; // = 10 else
 
 const uint8_t JoyCon::_mcu_crc8_table[256] = {
@@ -81,11 +83,12 @@ JoyCon::JoyCon(hid_device_info* dev_info) :
 	_ringcon(0x0A), //Ringcon data. Packet[40]. Fully pulled = 0x00, rest = 0x0a, fully pushed = 0x14.
 	_read_timeout(3),
 	_global_count(0), // TODO: ???
-	_stick_x(0),
-	_stick_y(0),
+	//_stick_x(0),
+	//_stick_y(0),
 	//_battery(0),
-	_accel(Eigen::Vector3f::Zero()),
-	_gyro(Eigen::Vector3f::Zero())
+	_stick(Eigen::Vector2i::Zero()),
+	_accel(Eigen::Vector3i::Zero()),
+	_gyro(Eigen::Vector3i::Zero())
 {	
 	_serial = _wcsdup(dev_info->serial_number);
 
@@ -249,9 +252,15 @@ void JoyCon::update(bool verbose)
 		//if (_type == RIGHT) {
 		//	std::cout << _name << ": " << getButtonsStateAsString() << std::endl;
 		//}
-		float x_cal, y_cal;
-		_calibration->stick(_stick_x, _stick_y, x_cal, y_cal);
-		std::cout << std::endl << _name << ": X " << _stick_x << "(" << x_cal << ")" << "\t Y " << _stick_y << "(" << y_cal << ")" << std::endl; // "\t BAT: " << static_cast<int>(_battery) << std::endl;
+		Eigen::Vector2f stick_cal;
+		Eigen::Vector3f accel_cal, gyro_cal;
+		
+		stick_cal = _calibration->stick(_stick);
+		accel_cal = _calibration->accel(_accel);
+		gyro_cal = _calibration->gyro(_gyro);
+		std::cout << std::endl << _name << ": X " << _stick.x() << "(" << stick_cal.x() << ")" << "\t Y " << _stick.y() << "(" << stick_cal.y() << ")" << std::endl; // "\t BAT: " << static_cast<int>(_battery) << std::endl;
+		std::cout << std::endl << _name << ": accel " << _accel.transpose() << "(" << accel_cal.transpose() << ")" << std::endl;
+		std::cout << std::endl << _name << ": gyro " << _gyro.transpose() << "(" << gyro_cal.transpose() << ")" << std::endl;
 	}
 }
 
@@ -362,21 +371,22 @@ void JoyCon::parseDataWithIMU(const std::vector<uint8_t>& data)
 
 	int stick_data_offset = _bluetooth_data_offset + getStickDataOffset();
 	
-	_stick_x = data[stick_data_offset + 0] | ((data[stick_data_offset + 1] & 0xF) << 8);
-	_stick_y = (data[stick_data_offset + 1] >> 4) | (data[stick_data_offset + 2] << 4);
+	// raw stick
+	_stick.x() = byte_conversions::combine_2bytesXLive(data[stick_data_offset + 0], data[stick_data_offset + 1]);
+	_stick.y() = byte_conversions::combine_2bytesYLive(data[stick_data_offset + 1], data[stick_data_offset + 2]); // (data[stick_data_offset + 1] >> 4) | (data[stick_data_offset + 2] << 4);
 	//_battery = (data[stick_data_offset + 1] & 0xF0) >> 4;
 	
 	//	jc->CalcAnalogStick(); // apply calib
 
-	// accel (m/s^2):
-	_accel.x() = static_cast<float>(uint16_to_int16(data[13] | (data[14] << 8) & 0xFF00)); // *jc->acc_cal_coeff[0];
-	_accel.y() = static_cast<float>(uint16_to_int16(data[15] | (data[16] << 8) & 0xFF00)); // *jc->acc_cal_coeff[1];
-	_accel.z() = static_cast<float>(uint16_to_int16(data[17] | (data[18] << 8) & 0xFF00));  //* jc->acc_cal_coeff[2];
+	// raw accel
+	_accel.x() = byte_conversions::combine_2bytesIMULive(data[13], data[14]);
+	_accel.y() = byte_conversions::combine_2bytesIMULive(data[15], data[16]);
+	_accel.z() = byte_conversions::combine_2bytesIMULive(data[17], data[18]);
 
-	// gyro (rad/s)
-	_gyro.x() = static_cast<float>((uint16_to_int16(data[19] | (data[20] << 8) & 0xFF00))); // - jc->sensor_cal[1][0]) * jc->gyro_cal_coeff[0]; //23 24 was working, now not so much
-	_gyro.y() = static_cast<float>((uint16_to_int16(data[21] | (data[22] << 8) & 0xFF00))); // -jc->sensor_cal[1][1])* jc->gyro_cal_coeff[1]; // 19 20 was working
-	_gyro.z() = static_cast<float>((uint16_to_int16(data[23] | (data[24] << 8) & 0xFF00))); // - jc->sensor_cal[1][2]) * jc->gyro_cal_coeff[2]; // 21 22 was working
+	// raw gyro
+	_gyro.x() = byte_conversions::combine_2bytesIMULive(data[19], data[20]);
+	_gyro.x() = byte_conversions::combine_2bytesIMULive(data[21], data[22]);
+	_gyro.x() = byte_conversions::combine_2bytesIMULive(data[23], data[24]);
 
 	// gyro offsets
 	//jc->setGyroOffsets();

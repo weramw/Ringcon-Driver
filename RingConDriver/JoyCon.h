@@ -88,14 +88,15 @@ protected:
 
 	int _read_timeout;
 
-	uint8_t _global_count; // TODO: check what this does...
+	uint8_t _global_count; // same as timing byte, response order for hid device
 
-	uint16_t _stick_x;
-	uint16_t _stick_y;
+	//uint16_t _stick_x;
+	//uint16_t _stick_y;
 	//uint8_t _battery;
 
-	Eigen::Vector3f _gyro;
-	Eigen::Vector3f _accel;
+	Eigen::Vector2i _stick;
+	Eigen::Vector3i _gyro;
+	Eigen::Vector3i _accel;
 
 };
 

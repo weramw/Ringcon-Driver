@@ -130,6 +130,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ByteConversions.cpp" />
     <ClCompile Include="Calibration.cpp" />
     <ClCompile Include="Driver.cpp" />
     <ClCompile Include="JoyCon.cpp" />
@@ -138,6 +139,7 @@
     <ClCompile Include="RingConDriver.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ByteConversions.h" />
     <ClInclude Include="Calibration.h" />
     <ClInclude Include="Driver.h" />
     <ClInclude Include="JoyCon.h" />

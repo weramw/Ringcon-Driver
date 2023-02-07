@@ -1905,7 +1905,6 @@ step20:
 		else {
 			//FormJoy::myform1->textBox_6axis_ucal->Text = L"\r\n\r\nUser:\r\nNo calibration";
 		}
-
 		// Use SPI calibration and convert them to SI acc unit
 		acc_cal_coeff[0] = (float)(1.0 / (float)(16384 - uint16_to_int16(sensor_cal[0][0]))) * 4.0f * 9.8f;
 		acc_cal_coeff[1] = (float)(1.0 / (float)(16384 - uint16_to_int16(sensor_cal[0][1]))) * 4.0f * 9.8f;
@@ -1915,5 +1914,11 @@ step20:
 		gyro_cal_coeff[0] = (float)(936.0 / (float)(13371 - uint16_to_int16(sensor_cal[1][0])) * 0.01745329251994);
 		gyro_cal_coeff[1] = (float)(936.0 / (float)(13371 - uint16_to_int16(sensor_cal[1][1])) * 0.01745329251994);
 		gyro_cal_coeff[2] = (float)(936.0 / (float)(13371 - uint16_to_int16(sensor_cal[1][2])) * 0.01745329251994);
+
+		printf("STICK CAL L X: %d %d %d\n", stick_cal_x_l[0], stick_cal_x_l[1], stick_cal_x_l[2]);
+		printf("STICK CAL L Y: %d %d %d\n", stick_cal_y_l[0], stick_cal_y_l[1], stick_cal_y_l[2]);
+
+		printf("ACCEL CAL: %d %d %d (%f %f %f)\n", sensor_cal[0][0], sensor_cal[0][1], sensor_cal[0][2], acc_cal_coeff[0], acc_cal_coeff[1], acc_cal_coeff[2]);
+		printf("GYRO CAL: %d %d %d (%f %f %f)\n", sensor_cal[1][0], sensor_cal[1][1], sensor_cal[1][2], gyro_cal_coeff[0], gyro_cal_coeff[1], gyro_cal_coeff[2]);
 	}
 };

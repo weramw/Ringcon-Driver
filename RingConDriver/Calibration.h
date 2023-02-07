@@ -11,9 +11,14 @@ class Calibration
 public:
 	Calibration(hid_device* handle, bool is_left);
 
-	void stick(uint16_t x, uint16_t y, float& res_x, float& res_y) const;
-	void accel(const Eigen::Vector3f& accel) const;
-	void gyro(const Eigen::Vector3f gyro) const;
+	// normalize stick coords to [-1.f,1.f]
+	Eigen::Vector2f stick(const Eigen::Vector2i& stick) const;
+
+	// normalize accel to [m/s^2]
+	Eigen::Vector3f accel(const Eigen::Vector3i& accel) const;
+
+	// normalize gyro to [rad/s]
+	Eigen::Vector3f gyro(const Eigen::Vector3i& gyro) const;
 
 	void setGyroOffsets(const Eigen::Vector3f& gyro);
 
@@ -35,23 +40,21 @@ protected:
 	void getStickData(hid_device* handle);	
 	void parseStickData(const std::vector<uint8_t>& data);
 
-	//void getIMUData(hid_device* handle);
+	void getIMUData(hid_device* handle);
 	
 protected:
 	bool _is_left;
 	int _timing_byte;
-
-	//bool _has_user_stick_l, _has_user_stick_r, _has_user_imu;
 	
-	float _x, _y;
-	Eigen::Vector3f _accel_coeff, _gyro_coeff;
+	//float _x, _y;
+	//Eigen::Vector3f _accel_coeff, _gyro_coeff;
 
-	uint16_t _factory_imu_calm[0xC];
-	uint16_t _user_imu_calm[0xC];
-	int16_t _imu[0x2][0x3];
-	//uint16_t _stick_x[0x3];
-	//uint16_t _stick_y[0x3];
+	//uint16_t _factory_imu_calm[0xC];
+	//uint16_t _user_imu_calm[0xC];
+	//int16_t _imu[0x2][0x3];
 
 	Eigen::Vector3i _stick_x, _stick_y; // min, center, max
+	Eigen::Matrix<int, 2, 3> _imu; // raw accel, gyro position
+	Eigen::Vector3f _accel, _gyro; // accel, gyro position for proper units
 };
 

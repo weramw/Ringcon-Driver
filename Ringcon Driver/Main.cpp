@@ -396,6 +396,10 @@ void handle_input(Joycon* jc, uint8_t* packet, int len) {
 			jc->gyro.yaw -= jc->gyro.offset.yaw;
 		}
 
+		printf("accel: %f %f %f\n", jc->accel.x, jc->accel.y, jc->accel.z);
+		printf("gyro: %f %f %f\n", jc->gyro.roll, jc->gyro.pitch, jc->gyro.yaw);
+		
+
 	}
 
 
