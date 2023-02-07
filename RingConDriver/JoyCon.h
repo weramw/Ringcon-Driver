@@ -7,12 +7,16 @@
 
 #include <hidapi.h>
 
+#include <Eigen/Core>
+
 class JoyCon
 {
 public:
 	static const int VENDOR_ID = 1406;
 	static const int PRODUCT_ID_LEFT = 8198;
 	static const int PRODUCT_ID_RIGHT = 8199;
+
+	static int16_t uint16_to_int16(uint16_t a);
 
 	enum TYPE {
 		LEFT, RIGHT,UNKOWN
@@ -60,6 +64,8 @@ protected:
 	
 	void parseData(const std::vector<uint8_t>& data);
 
+	void parseDataWithIMU(const std::vector<uint8_t>& data);
+
 	void initialize();
 
 protected:
@@ -75,6 +81,9 @@ protected:
 	int _read_timeout;
 
 	uint8_t _global_count; // TODO: check what this does...
+
+	Eigen::Vector3f _gyro;
+	Eigen::Vector3f _accel;
 
 };
 

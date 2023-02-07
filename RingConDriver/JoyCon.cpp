@@ -44,6 +44,13 @@ const uint8_t JoyCon::_ringmcu_crc8_table[256] = {
 0x99, 0x14, 0x0E, 0x83, 0x3A, 0xB7, 0xAD, 0x20, 0x52, 0xDF, 0xC5, 0x48, 0xF1, 0x7C, 0x66, 0xEB
 };
 
+int16_t JoyCon::uint16_to_int16(uint16_t a) {
+	int16_t b;
+	char* aPointer = (char*)&a, * bPointer = (char*)&b;
+	memcpy(bPointer, aPointer, sizeof(a));
+	return b;
+}
+
 uint8_t JoyCon::mcu_crc8_calc(uint8_t* buffer, uint8_t size) const { //CTCAER
 	uint8_t crc8 = 0x0;
 
@@ -204,7 +211,7 @@ void JoyCon::update(bool verbose)
 
 	//std::cout << "Got " << len_data << " bytes of data." << std::endl;
 
-	//parseData(data);
+	parseData(data);
 	if (verbose) {
 		// TODO: print data
 	}
@@ -296,127 +303,94 @@ void JoyCon::parseData(const std::vector<uint8_t>& data)
 		std::cout << "buttons presses only" << std::endl;
 		break;
 	case 0x30:
-		std::cout << "IMU" << std::endl;
-		break;
+		//std::cout << "IMU" << std::endl;
+		//break;
 	case 0x31:
-		std::cout << "NFC" << std::endl;
-		break;
+		//std::cout << "NFC" << std::endl;
+		//break;
 	case 0x32:
-		std::cout << "?" << std::endl;
-		break;
+		//std::cout << "?" << std::endl;
+		//break;
+		parseDataWithIMU(data);
 	default:
 		std::cout << "? data type: " << data[0] << std::endl;
 	}
 }
 
+void JoyCon::parseDataWithIMU(const std::vector<uint8_t>& data)
+{
+	if (_type == UNKOWN) {
+		std::cout << "JoyCon type unkown, cannot parse data!" << std::endl;
+		return;
+	}
 
-//// input update packet:
-//// 0x21 is just buttons, 0x30 includes gyro, 0x31 includes NFC (large packet size)
-//if (packet[0] == 0x30 || packet[0] == 0x31 || packet[0] == 0x32) {
-//
-//	// offset for usb or bluetooth data:
-//	/*int offset = settings.usingBluetooth ? 0 : 10;*/
-//	int offset = jc->bluetooth ? 0 : 10;
-//
-//	uint8_t* btn_data = packet + offset + 3;
-//
-//	// get button states:
-//	{
-//		uint16_t states = 0;
-//		uint16_t states2 = 0;
-//
-//		// Left JoyCon:
-//		if (jc->left_right == 1) {
-//			states = (btn_data[1] << 8) | (btn_data[2] & 0xFF);
-//			// Right JoyCon:
-//		}
-//		else if (jc->left_right == 2) {
-//			states = (btn_data[1] << 8) | (btn_data[0] & 0xFF);
-//			// Pro Controller:
-//		}
-//		else if (jc->left_right == 3) {
-//			states = (btn_data[1] << 8) | (btn_data[2] & 0xFF);
-//			states2 = (btn_data[1] << 8) | (btn_data[0] & 0xFF);
-//		}
-//
-//		jc->buttons = states;
-//		// Pro Controller:
-//		if (jc->left_right == 3) {
-//			jc->buttons2 = states2;
-//
-//			// fix some non-sense the Pro Controller does
-//			// clear nth bit
-//			//num &= ~(1UL << n);
-//			jc->buttons &= ~(1UL << 9);
-//			jc->buttons &= ~(1UL << 10);
-//			jc->buttons &= ~(1UL << 12);
-//			jc->buttons &= ~(1UL << 14);
-//
-//			jc->buttons2 &= ~(1UL << 8);
-//			jc->buttons2 &= ~(1UL << 11);
-//			jc->buttons2 &= ~(1UL << 13);
-//		}
+	// bt offset
+	int offset = 10; // = 0 else
+
+	uint16_t btn_states;
+	uint16_t stick_x, stick_y;
+	uint8_t battery;
+
+	if (_type == LEFT) {
+		btn_states = (data[offset + 4] << 8) | (data[offset + 5] & 0xFF);
+		stick_x = data[offset + 6 + 0] | ((data[offset + 6 + 1] & 0xF) << 8);
+		stick_y = (data[offset + 6 + 1] >> 4) | (data[offset + 6 + 2] << 4);
+		battery = (data[offset + 6 + 1] & 0xF0) >> 4;
+	}
+	else {
+		btn_states = (data[offset + 4] << 8) | (data[offset + 3] & 0xFF);
+		stick_x = data[offset + 9 + 0] | ((data[offset + 9 + 1] & 0xF) << 8);
+		stick_y = (data[offset + 9 + 1] >> 4) | (data[offset + 9 + 2] << 4);
+		battery = (data[offset + 9 + 1] & 0xF0) >> 4;
+	}
+
+	//	jc->CalcAnalogStick(); // apply calib
+
+	// accel (m/s^2):
+	float accel_x = static_cast<float>(uint16_to_int16(data[13] | (data[14] << 8) & 0xFF00)); // *jc->acc_cal_coeff[0];
+	float accel_y = static_cast<float>(uint16_to_int16(data[15] | (data[16] << 8) & 0xFF00)); // *jc->acc_cal_coeff[1];
+	float accel_z = static_cast<float>(uint16_to_int16(data[17] | (data[18] << 8) & 0xFF00));  //* jc->acc_cal_coeff[2];
+
+	// gyro (rad/s)
+	float gyro_roll = static_cast<float>((uint16_to_int16(data[19] | (data[20] << 8) & 0xFF00))); // - jc->sensor_cal[1][0]) * jc->gyro_cal_coeff[0]; //23 24 was working, now not so much
+	float gyro_pitch = static_cast<float>((uint16_to_int16(data[21] | (data[22] << 8) & 0xFF00))); // -jc->sensor_cal[1][1])* jc->gyro_cal_coeff[1]; // 19 20 was working
+	float gyro_yaw = static_cast<float>((uint16_to_int16(data[23] | (data[24] << 8) & 0xFF00))); // - jc->sensor_cal[1][2]) * jc->gyro_cal_coeff[2]; // 21 22 was working
+
+	// gyro offsets
+	//jc->setGyroOffsets();
+	//
+	//		jc->gyro.roll -= jc->gyro.offset.roll;
+	//		jc->gyro.pitch -= jc->gyro.offset.pitch;
+	//		jc->gyro.yaw -= jc->gyro.offset.yaw;
+
+		//		jc->btns.down = (jc->buttons & (1 << 0)) ? 1 : 0;
+//		jc->btns.up = (jc->buttons & (1 << 1)) ? 1 : 0;
+//		jc->btns.right = (jc->buttons & (1 << 2)) ? 1 : 0;
+//		jc->btns.left = (jc->buttons & (1 << 3)) ? 1 : 0;
+//		jc->btns.sr = (jc->buttons & (1 << 4)) ? 1 : 0;
+//		jc->btns.sl = (jc->buttons & (1 << 5)) ? 1 : 0;
+//		jc->btns.l = (jc->buttons & (1 << 6)) ? 1 : 0;
+//		jc->btns.zl = (jc->buttons & (1 << 7)) ? 1 : 0;
+//		jc->btns.minus = (jc->buttons & (1 << 8)) ? 1 : 0;
+//		jc->btns.stick_button = (jc->buttons & (1 << 11)) ? 1 : 0;
+//		jc->btns.capture = (jc->buttons & (1 << 13)) ? 1 : 0;
 //	}
+//		jc->btns.y = (jc->buttons & (1 << 0)) ? 1 : 0;
+//		jc->btns.x = (jc->buttons & (1 << 1)) ? 1 : 0;
+//		jc->btns.b = (jc->buttons & (1 << 2)) ? 1 : 0;
+//		jc->btns.a = (jc->buttons & (1 << 3)) ? 1 : 0;
+//		jc->btns.sr = (jc->buttons & (1 << 4)) ? 1 : 0;
+//		jc->btns.sl = (jc->buttons & (1 << 5)) ? 1 : 0;
+//		jc->btns.r = (jc->buttons & (1 << 6)) ? 1 : 0;
+//		jc->btns.zr = (jc->buttons & (1 << 7)) ? 1 : 0;
+//		jc->btns.plus = (jc->buttons & (1 << 9)) ? 1 : 0;
+//		jc->btns.stick_button = (jc->buttons & (1 << 10)) ? 1 : 0;
+//		jc->btns.home = (jc->buttons & (1 << 12)) ? 1 : 0;
 //
-//	// get stick data:
-//	uint8_t* stick_data = packet + offset;
-//	if (jc->left_right == 1) {
-//		stick_data += 6;
-//	}
-//	else if (jc->left_right == 2) {
-//		stick_data += 9;
-//	}
-//
-//	uint16_t stick_x = stick_data[0] | ((stick_data[1] & 0xF) << 8);
-//	uint16_t stick_y = (stick_data[1] >> 4) | (stick_data[2] << 4);
-//	jc->stick.x = stick_x;
-//	jc->stick.y = stick_y;
-//
-//	// use calibration data:
-//	jc->CalcAnalogStick();
-//
-//	// pro controller:
-//	if (jc->left_right == 3) {
-//		stick_data += 6;
-//		uint16_t stick_x = stick_data[0] | ((stick_data[1] & 0xF) << 8);
-//		uint16_t stick_y = (stick_data[1] >> 4) | (stick_data[2] << 4);
-//		jc->stick.x = (int)(unsigned int)stick_x;
-//		jc->stick.y = (int)(unsigned int)stick_y;
-//		stick_data += 3;
-//		uint16_t stick_x2 = stick_data[0] | ((stick_data[1] & 0xF) << 8);
-//		uint16_t stick_y2 = (stick_data[1] >> 4) | (stick_data[2] << 4);
-//		jc->stick2.x = (int)(unsigned int)stick_x2;
-//		jc->stick2.y = (int)(unsigned int)stick_y2;
-//
-//		// calibration data:
-//		jc->CalcAnalogStick();
-//	}
-//
-//	jc->battery = (stick_data[1] & 0xF0) >> 4;
-//	//printf("JoyCon battery: %d\n", jc->battery);
-//
-//	// Accelerometer:
-//	// Accelerometer data is absolute (m/s^2)
-//	{
-//
-//		// get accelerometer X:
-//		jc->accel.x = (float)(uint16_to_int16(packet[13] | (packet[14] << 8) & 0xFF00)) * jc->acc_cal_coeff[0];
-//
-//		// get accelerometer Y:
-//		jc->accel.y = (float)(uint16_to_int16(packet[15] | (packet[16] << 8) & 0xFF00)) * jc->acc_cal_coeff[1];
-//
-//		// get accelerometer Z:
-//		jc->accel.z = (float)(uint16_to_int16(packet[17] | (packet[18] << 8) & 0xFF00)) * jc->acc_cal_coeff[2];
-//	}
-//
-//
-//
-//	// Gyroscope:
-//	// Gyroscope data is relative (rads/s)
-//	if (jc->left_right == 2 && ringconattached) {
-//		{
-//
-//			// get roll:
+}
+
+//	if (_hasRingCon) {
+		// get roll:
 //			jc->gyro.roll = (float)((uint16_to_int16(packet[35] | (packet[36] << 8) & 0xFF00)) - jc->sensor_cal[1][0]) * jc->gyro_cal_coeff[0]; //23 24 was working
 //
 //			// get pitch:
@@ -437,36 +411,9 @@ void JoyCon::parseData(const std::vector<uint8_t>& data)
 //			//29-30 Pitch centred at vertical - up = -, down = +
 //			//31-32, 33-34, 35-36 arebouncing around but have something to do with the gyro. maybe i need a single byte?
 //			//printf("%f      %f     %f", jc->gyro.roll, jc->gyro.yaw, jc->gyro.pitch);
-//		}
-//	}
-//	else {
-//
-//		// get roll:
-//		jc->gyro.roll = (float)((uint16_to_int16(packet[19] | (packet[20] << 8) & 0xFF00)) - jc->sensor_cal[1][0]) * jc->gyro_cal_coeff[0]; //23 24 was working, now not so much
-//
-//		// get pitch:
-//		jc->gyro.pitch = (float)((uint16_to_int16(packet[21] | (packet[22] << 8) & 0xFF00)) - jc->sensor_cal[1][1]) * jc->gyro_cal_coeff[1]; // 19 20 was working
-//
-//		// get yaw:
-//		jc->gyro.yaw = (float)((uint16_to_int16(packet[23] | (packet[24] << 8) & 0xFF00)) - jc->sensor_cal[1][2]) * jc->gyro_cal_coeff[2]; // 21 22 was working
 //	}
 //
-//	// offsets:
-//	{
-//		jc->setGyroOffsets();
-//
-//		jc->gyro.roll -= jc->gyro.offset.roll;
-//		jc->gyro.pitch -= jc->gyro.offset.pitch;
-//		jc->gyro.yaw -= jc->gyro.offset.yaw;
-//	}
-//
-//}
-//
-//
-//
-//
-//
-//
+
 //// handle button combos:
 //{
 //	bool lightpress = false;
@@ -644,38 +591,7 @@ void JoyCon::parseData(const std::vector<uint8_t>& data)
 //			squatmousemult = 1;
 //		}
 //
-//		//Mouse buttons
-//		if (settings.enableGyro && !settings.combineJoyCons) {
-//			if (jc->buttons & (1 << 7) && !leftmousedown) { //ZL controls left mouse button
-//				MC.LeftClickDown();
-//				leftmousedown = true;
-//			}
-//			if (!(jc->buttons & (1 << 7)) && leftmousedown) { //ZL controls left mouse button
-//				MC.LeftClickUp();
-//				leftmousedown = false;
-//			}
-//			if (jc->buttons & (1 << 6) && !rightmousedown) { //L controls right mouse button
-//				MC.RightClickDown();
-//				rightmousedown = true;
-//			}
-//			if (!(jc->buttons & (1 << 6)) && rightmousedown) { //L controls right mouse button
-//				MC.RightClickUp();
-//				rightmousedown = false;
-//			}
-//		}
 //
-//		jc->btns.down = (jc->buttons & (1 << 0)) ? 1 : 0;
-//		jc->btns.up = (jc->buttons & (1 << 1)) ? 1 : 0;
-//		jc->btns.right = (jc->buttons & (1 << 2)) ? 1 : 0;
-//		jc->btns.left = (jc->buttons & (1 << 3)) ? 1 : 0;
-//		jc->btns.sr = (jc->buttons & (1 << 4)) ? 1 : 0;
-//		jc->btns.sl = (jc->buttons & (1 << 5)) ? 1 : 0;
-//		jc->btns.l = (jc->buttons & (1 << 6)) ? 1 : 0;
-//		jc->btns.zl = (jc->buttons & (1 << 7)) ? 1 : 0;
-//		jc->btns.minus = (jc->buttons & (1 << 8)) ? 1 : 0;
-//		jc->btns.stick_button = (jc->buttons & (1 << 11)) ? 1 : 0;
-//		jc->btns.capture = (jc->buttons & (1 << 13)) ? 1 : 0;
-//	}
 //
 //	// right:
 //	if (jc->left_right == 2) {
@@ -718,47 +634,5 @@ void JoyCon::parseData(const std::vector<uint8_t>& data)
 //				rightmousedown = false;
 //			}
 //		}
-//
-//		jc->btns.y = (jc->buttons & (1 << 0)) ? 1 : 0;
-//		jc->btns.x = (jc->buttons & (1 << 1)) ? 1 : 0;
-//		jc->btns.b = (jc->buttons & (1 << 2)) ? 1 : 0;
-//		jc->btns.a = (jc->buttons & (1 << 3)) ? 1 : 0;
-//		jc->btns.sr = (jc->buttons & (1 << 4)) ? 1 : 0;
-//		jc->btns.sl = (jc->buttons & (1 << 5)) ? 1 : 0;
-//		jc->btns.r = (jc->buttons & (1 << 6)) ? 1 : 0;
-//		jc->btns.zr = (jc->buttons & (1 << 7)) ? 1 : 0;
-//		jc->btns.plus = (jc->buttons & (1 << 9)) ? 1 : 0;
-//		jc->btns.stick_button = (jc->buttons & (1 << 10)) ? 1 : 0;
-//		jc->btns.home = (jc->buttons & (1 << 12)) ? 1 : 0;
-//	}
-//
-//	// pro controller:
-//	if (jc->left_right == 3) {
-//
-//		// left:
-//		jc->btns.down = (jc->buttons & (1 << 0)) ? 1 : 0;
-//		jc->btns.up = (jc->buttons & (1 << 1)) ? 1 : 0;
-//		jc->btns.right = (jc->buttons & (1 << 2)) ? 1 : 0;
-//		jc->btns.left = (jc->buttons & (1 << 3)) ? 1 : 0;
-//		jc->btns.sr = (jc->buttons & (1 << 4)) ? 1 : 0;
-//		jc->btns.sl = (jc->buttons & (1 << 5)) ? 1 : 0;
-//		jc->btns.l = (jc->buttons & (1 << 6)) ? 1 : 0;
-//		jc->btns.zl = (jc->buttons & (1 << 7)) ? 1 : 0;
-//		jc->btns.minus = (jc->buttons & (1 << 8)) ? 1 : 0;
-//		jc->btns.stick_button = (jc->buttons & (1 << 11)) ? 1 : 0;
-//		jc->btns.capture = (jc->buttons & (1 << 13)) ? 1 : 0;
-//
-//		// right:
-//		jc->btns.y = (jc->buttons2 & (1 << 0)) ? 1 : 0;
-//		jc->btns.x = (jc->buttons2 & (1 << 1)) ? 1 : 0;
-//		jc->btns.b = (jc->buttons2 & (1 << 2)) ? 1 : 0;
-//		jc->btns.a = (jc->buttons2 & (1 << 3)) ? 1 : 0;
-//		jc->btns.sr = (jc->buttons2 & (1 << 4)) ? 1 : 0;
-//		jc->btns.sl = (jc->buttons2 & (1 << 5)) ? 1 : 0;
-//		jc->btns.r = (jc->buttons2 & (1 << 6)) ? 1 : 0;
-//		jc->btns.zr = (jc->buttons2 & (1 << 7)) ? 1 : 0;
-//		jc->btns.plus = (jc->buttons2 & (1 << 9)) ? 1 : 0;
-//		jc->btns.stick_button2 = (jc->buttons2 & (1 << 10)) ? 1 : 0;
-//		jc->btns.home = (jc->buttons2 & (1 << 12)) ? 1 : 0;
 //
 //	}
