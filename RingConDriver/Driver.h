@@ -18,6 +18,7 @@ public:
 	void update();
 
 protected:
+	int _lines_printed;
 	JoyCon *_joycon_left, *_joycon_right;
 
 };

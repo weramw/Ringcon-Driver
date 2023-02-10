@@ -9,6 +9,7 @@
 
 #include <Eigen/Core>
 
+#include "IOHelper.h"
 #include "Calibration.h"
 
 class JoyCon
@@ -42,8 +43,21 @@ public:
 	// reads all available data from device
 	void update(bool verbose=true);
 
+	// prints joycon stats
+	// return no lines printed
+	int printStats() const;
+
 	std::string getName() const;
 	std::string getStringForType() const;
+
+	Eigen::Vector2f getStick() const;
+	Eigen::Vector3f getAccel() const;
+	Eigen::Vector3f getGyro() const;
+
+
+	Eigen::Vector2i getStickRaw() const;
+	Eigen::Vector3i getAccelRaw() const;
+	Eigen::Vector3i getGyroRaw() const;
 
 	void setPlayerLED(std::array<LIGHT, 4> values);
 	void rumble(uint8_t frequency, RUMBLE_INTENSITY intensity);
@@ -56,9 +70,10 @@ protected:
 	uint8_t mcu_crc8_calc(uint8_t* buffer, uint8_t size) const;
 	uint8_t ringmcu_crc8_calc(uint8_t* buffer, uint8_t size) const;
 
+	void initialize();
+
 	// write data to device
 	// returns True on success
-
 	bool writeToDevice(const std::vector<uint8_t>& data);
 
 	bool sendCommand(uint8_t command, const std::vector<uint8_t>& data);
@@ -72,8 +87,6 @@ protected:
 	virtual void parseButtonsState(const std::vector<uint8_t>& data) = 0;
 	virtual int getStickDataOffset() const = 0;
 	virtual std::string getButtonsStateAsString() const = 0;
-
-	void initialize();
 
 protected:
 	hid_device* _handle;
@@ -98,7 +111,6 @@ protected:
 	Eigen::Vector3i _gyro;
 	Eigen::Vector3i _accel;
 
-	bool _text_helper_is_first_output;
-
+	IOHelper _io_helper;
 };
 

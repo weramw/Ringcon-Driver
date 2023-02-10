@@ -133,6 +133,7 @@
     <ClCompile Include="ByteConversions.cpp" />
     <ClCompile Include="Calibration.cpp" />
     <ClCompile Include="Driver.cpp" />
+    <ClCompile Include="IOHelper.cpp" />
     <ClCompile Include="JoyCon.cpp" />
     <ClCompile Include="JoyConLeft.cpp" />
     <ClCompile Include="JoyConRight.cpp" />
@@ -142,6 +143,7 @@
     <ClInclude Include="ByteConversions.h" />
     <ClInclude Include="Calibration.h" />
     <ClInclude Include="Driver.h" />
+    <ClInclude Include="IOHelper.h" />
     <ClInclude Include="JoyCon.h" />
     <ClInclude Include="JoyConLeft.h" />
     <ClInclude Include="JoyConRight.h" />

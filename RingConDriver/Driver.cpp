@@ -6,6 +6,7 @@
 #include "JoyConRight.h"
 
 Driver::Driver() :
+	_lines_printed(0),
 	_joycon_left(nullptr),
 	_joycon_right(nullptr)
 {
@@ -14,8 +15,8 @@ Driver::Driver() :
 
 bool Driver::is_connected() const
 {
-	//return (_joycon_left != nullptr) && (_joycon_right != nullptr);
-	return (_joycon_left != nullptr);
+	return (_joycon_left != nullptr) && (_joycon_right != nullptr);
+	//return (_joycon_left != nullptr);
 }
 
 void Driver::connect()
@@ -83,5 +84,14 @@ void Driver::update()
 	}
 
 	//std::cout << "." << std::flush;
-
+	std::cout << "\x1b[" << _lines_printed << "A"; // move up n lines
+	std::cout << "\x1b[" << _lines_printed << "M"; // delete last n lines
+	
+	_lines_printed = 0;
+	if (_joycon_left != nullptr) {
+		_lines_printed += _joycon_left->printStats();
+	}
+	if (_joycon_right != nullptr) {
+		_lines_printed += _joycon_right->printStats();
+	}
 }
