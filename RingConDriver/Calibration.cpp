@@ -260,9 +260,12 @@ Eigen::Vector3f Calibration::accel(const Eigen::Vector3i& accel) const
 Eigen::Vector3f Calibration::gyro(const Eigen::Vector3i& gyro) const
 {
 	Eigen::Vector3f res(Eigen::Vector3f::Zero());
-	res.x() = (_gyro.x() - _imu(1,0)) * gyro.x();
-	res.y() = (_gyro.y() - _imu(1,1)) * gyro.y();
-	res.z() = (_gyro.z() - _imu(1,2)) * gyro.z();
+	//res.x() = (_gyro.x() - _imu(1,0)) * gyro.x();
+	//res.y() = (_gyro.y() - _imu(1,1)) * gyro.y();
+	//res.z() = (_gyro.z() - _imu(1,2)) * gyro.z();
+	res.x() = _gyro.x() * gyro.x();
+	res.y() = _gyro.y() * gyro.y();
+	res.z() = _gyro.z() * gyro.z();
 	return res;
 }
 

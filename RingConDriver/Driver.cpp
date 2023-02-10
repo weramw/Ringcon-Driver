@@ -82,6 +82,6 @@ void Driver::update()
 		_joycon_left->update();
 	}
 
-	std::cout << "." << std::flush;
+	//std::cout << "." << std::flush;
 
 }

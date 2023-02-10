@@ -1,6 +1,9 @@
 #include "JoyCon.h"
 
 #include <iostream>
+#include <sstream>
+#include <iomanip>
+
 //#include <algorithm>
 
 #define NOMINMAX // prevent windows interfering with c++ min max
@@ -88,7 +91,8 @@ JoyCon::JoyCon(hid_device_info* dev_info) :
 	//_battery(0),
 	_stick(Eigen::Vector2i::Zero()),
 	_accel(Eigen::Vector3i::Zero()),
-	_gyro(Eigen::Vector3i::Zero())
+	_gyro(Eigen::Vector3i::Zero()),
+	_text_helper_is_first_output(true)
 {	
 	_serial = _wcsdup(dev_info->serial_number);
 
@@ -217,6 +221,49 @@ void JoyCon::rumble(uint8_t frequency, RUMBLE_INTENSITY intensity)
 	hid_set_nonblocking(_handle, 0);
 }
 
+std::string intToString(int i)
+{
+	std::stringstream ss;
+	ss << std::setfill(' ') << std::setw(8) << i;
+	return ss.str();
+}
+
+std::string toString(const Eigen::Vector2i& vec)
+{
+	std::stringstream ss;
+	ss << intToString(vec.x()) << " " << intToString(vec.y());
+	return ss.str();
+}
+
+std::string toString(const Eigen::Vector3i& vec) 
+{
+	std::stringstream ss;
+	ss << intToString(vec.x()) << " " << intToString(vec.y()) << " " << intToString(vec.z());
+	return ss.str();
+}
+
+std::string floatToString(float f)
+{
+	std::stringstream ss;
+	ss.precision(4);	
+	ss << std::fixed << std::setprecision(4) << std::setfill(' ') << std::setw(4) << f;
+	return ss.str();
+}
+
+std::string toString(const Eigen::Vector2f& vec)
+{
+	std::stringstream ss;
+	ss << floatToString(vec.x()) << " " << floatToString(vec.y());
+	return ss.str();
+}
+
+std::string toString(const Eigen::Vector3f& vec)
+{
+	std::stringstream ss;
+	ss << floatToString(vec.x()) << " " << floatToString(vec.y()) << " " << floatToString(vec.z());
+	return ss.str();
+}
+
 void JoyCon::update(bool verbose)
 {
 	if (_handle == nullptr) {
@@ -235,17 +282,19 @@ void JoyCon::update(bool verbose)
 	}
 
 	//std::cout << "Got " << len_data << " bytes of data." << std::endl;
+	//std::cout << _name << ": before parse - data[0] = " << int(data[0]) << std::endl;
 
-	parseData(data);
-	if (verbose) {
-		if (_type == LEFT) {
-			std::cout << "l" << std::flush;
-		} else if (_type == RIGHT) {
-			std::cout << "r" << std::flush;
-		}
-		else {
-			std::cout << "x" << std::flush;
-		}
+	bool success = parseData(data);
+	//std::cout << _name << ": after parse - data[0] = " << int(data[0]) << std::endl;
+	if (verbose && success) {
+		//if (_type == LEFT) {
+		//	std::cout << "l" << std::flush;
+		//} else if (_type == RIGHT) {
+		//	std::cout << "r" << std::flush;
+		//}
+		//else {
+		//	std::cout << "x" << std::flush;
+		//}
 		// TODO: print data
 		//std::cout << _name << " - Accel: " << _accel.transpose() << std::endl;
 		//std::cout << _name << " - Gyro: " << _gyro.transpose() << std::endl;
@@ -258,9 +307,19 @@ void JoyCon::update(bool verbose)
 		stick_cal = _calibration->stick(_stick);
 		accel_cal = _calibration->accel(_accel);
 		gyro_cal = _calibration->gyro(_gyro);
-		std::cout << std::endl << _name << ": X " << _stick.x() << "(" << stick_cal.x() << ")" << "\t Y " << _stick.y() << "(" << stick_cal.y() << ")" << std::endl; // "\t BAT: " << static_cast<int>(_battery) << std::endl;
-		std::cout << std::endl << _name << ": accel " << _accel.transpose() << "(" << accel_cal.transpose() << ")" << std::endl;
-		std::cout << std::endl << _name << ": gyro " << _gyro.transpose() << "(" << gyro_cal.transpose() << ")" << std::endl;
+		if (_text_helper_is_first_output) {
+			_text_helper_is_first_output = false;
+		}
+		else {
+			std::cout << "\x1b[4A"; // move up three lines
+			std::cout << "\x1b[4M"; // delete last three lines
+		}
+		
+		std::cout << _name << ": data[0] = " << int(data[0]) << std::endl; 
+		std::cout << _name << ": X,Y \t" << toString(_stick) << "\t\t(" << toString(stick_cal) << ")" << std::endl;
+		std::cout << _name << ": accel \t" << toString(_accel) << "\t(" << toString(accel_cal) << ")" << std::endl;
+		std::cout << _name << ": gyro \t" << toString(_gyro) << "\t(" << toString(gyro_cal) << ")" << std::endl;
+		//std::cout << _name << ": gyro packets: " << int(data[19]) << " " << int(data[20]) << " | " << int(data[21]) << " " << int(data[22]) << " | " << int(data[23]) << " " << int(data[24]) << std::endl;
 	}
 }
 
@@ -336,12 +395,12 @@ bool JoyCon::sendSubCommand(uint8_t command, uint8_t subcommand, const std::vect
 	return sendCommand(command, buffer);
 }
 
-void JoyCon::parseData(const std::vector<uint8_t>& data)
+bool JoyCon::parseData(const std::vector<uint8_t>& data)
 {
 	// TOOD: parse data
 
-	//std::cout << "data[0]: " << int(data[0]) << std::endl;
-
+	//std::cout << " in parse data[0]: " << int(data[0]) << std::endl;
+	bool success = false;
 	switch (data[0]) {
 	case 0x3F:
 		std::cout << "BT button pressed" << std::endl;
@@ -358,11 +417,13 @@ void JoyCon::parseData(const std::vector<uint8_t>& data)
 	case 0x32:
 		//std::cout << "?" << std::endl;		
 		parseDataWithIMU(data);
+		success = true;
 		break;
 	default:
 		//std::cout << "? data type: " << data[0] << std::endl;
 		std::cout << "?(" << data[0] << ")" << std::flush;
 	}
+	return success;
 }
 
 void JoyCon::parseDataWithIMU(const std::vector<uint8_t>& data)
@@ -385,8 +446,8 @@ void JoyCon::parseDataWithIMU(const std::vector<uint8_t>& data)
 
 	// raw gyro
 	_gyro.x() = byte_conversions::combine_2bytesIMULive(data[19], data[20]);
-	_gyro.x() = byte_conversions::combine_2bytesIMULive(data[21], data[22]);
-	_gyro.x() = byte_conversions::combine_2bytesIMULive(data[23], data[24]);
+	_gyro.y() = byte_conversions::combine_2bytesIMULive(data[21], data[22]);
+	_gyro.z() = byte_conversions::combine_2bytesIMULive(data[23], data[24]);
 
 	// gyro offsets
 	//jc->setGyroOffsets();
@@ -396,3 +457,18 @@ void JoyCon::parseDataWithIMU(const std::vector<uint8_t>& data)
 	//		jc->gyro.yaw -= jc->gyro.offset.yaw;
 }
 
+//void setGyroOffsets() {
+//	float thresh = 0.1;
+//	if (abs(this->gyro.roll) > thresh || abs(this->gyro.pitch) > thresh || abs(this->gyro.yaw) > thresh) {
+//		return;
+//	}
+//
+//	//average = current + ((newData - current) / n);
+//	this->gyro.offset.n += 1;
+//	this->gyro.offset.roll = this->gyro.offset.roll + ((this->gyro.roll - this->gyro.offset.roll) / this->gyro.offset.n);
+//	this->gyro.offset.pitch = this->gyro.offset.pitch + ((this->gyro.pitch - this->gyro.offset.pitch) / this->gyro.offset.n);
+//	this->gyro.offset.yaw = this->gyro.offset.yaw + ((this->gyro.yaw - this->gyro.offset.yaw) / this->gyro.offset.n);
+//	//this->gyro.offset.roll	= this->gyro.roll;
+//	//this->gyro.offset.pitch = this->gyro.pitch;
+//	//this->gyro.offset.yaw	= this->gyro.yaw;
+//}

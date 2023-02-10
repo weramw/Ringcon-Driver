@@ -65,7 +65,7 @@ protected:
 
 	bool sendSubCommand(uint8_t command, uint8_t subcommand, const std::vector<uint8_t>& data);
 	
-	void parseData(const std::vector<uint8_t>& data);
+	bool parseData(const std::vector<uint8_t>& data);
 
 	void parseDataWithIMU(const std::vector<uint8_t>& data);
 
@@ -97,6 +97,8 @@ protected:
 	Eigen::Vector2i _stick;
 	Eigen::Vector3i _gyro;
 	Eigen::Vector3i _accel;
+
+	bool _text_helper_is_first_output;
 
 };
 

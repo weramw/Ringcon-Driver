@@ -249,7 +249,6 @@ void handle_input(Joycon* jc, uint8_t* packet, int len) {
 	// input update packet:
 	// 0x21 is just buttons, 0x30 includes gyro, 0x31 includes NFC (large packet size)
 	if (packet[0] == 0x30 || packet[0] == 0x31 || packet[0] == 0x32) {
-
 		// offset for usb or bluetooth data:
 		/*int offset = settings.usingBluetooth ? 0 : 10;*/
 		int offset = jc->bluetooth ? 0 : 10;
@@ -377,14 +376,21 @@ void handle_input(Joycon* jc, uint8_t* packet, int len) {
 		}
 		else {
 
+			int x, y, z;
+			x = uint16_to_int16(packet[19] | (packet[20] << 8) & 0xFF00);
+			y = uint16_to_int16(packet[21] | (packet[22] << 8) & 0xFF00);
+			z = uint16_to_int16(packet[23] | (packet[24] << 8) & 0xFF00);
+			printf("packet[0] = %d; gyro: %d %d %d\n", packet[0], x,y,z);
+			printf("packets: [%d %d | %d %d | %d %d]\n", packet[19], packet[20], packet[21], packet[22], packet[23], packet[24]);
+
 			// get roll:
-			jc->gyro.roll = (float)((uint16_to_int16(packet[19] | (packet[20] << 8) & 0xFF00)) - jc->sensor_cal[1][0]) * jc->gyro_cal_coeff[0]; //23 24 was working, now not so much
+			jc->gyro.roll = (float)(x - jc->sensor_cal[1][0]) * jc->gyro_cal_coeff[0]; //23 24 was working, now not so much
 
 			// get pitch:
-			jc->gyro.pitch = (float)((uint16_to_int16(packet[21] | (packet[22] << 8) & 0xFF00)) - jc->sensor_cal[1][1]) * jc->gyro_cal_coeff[1]; // 19 20 was working
+			jc->gyro.pitch = (float)(y - jc->sensor_cal[1][1]) * jc->gyro_cal_coeff[1]; // 19 20 was working
 
 			// get yaw:
-			jc->gyro.yaw = (float)((uint16_to_int16(packet[23] | (packet[24] << 8) & 0xFF00)) - jc->sensor_cal[1][2]) * jc->gyro_cal_coeff[2]; // 21 22 was working
+			jc->gyro.yaw = (float)(z - jc->sensor_cal[1][2]) * jc->gyro_cal_coeff[2]; // 21 22 was working
 		}
 
 		// offsets:
@@ -395,11 +401,9 @@ void handle_input(Joycon* jc, uint8_t* packet, int len) {
 			jc->gyro.pitch -= jc->gyro.offset.pitch;
 			jc->gyro.yaw -= jc->gyro.offset.yaw;
 		}
-
-		printf("accel: %f %f %f\n", jc->accel.x, jc->accel.y, jc->accel.z);
-		printf("gyro: %f %f %f\n", jc->gyro.roll, jc->gyro.pitch, jc->gyro.yaw);
 		
-
+		//printf("accel: %f %f %f\n", jc->accel.x, jc->accel.y, jc->accel.z);
+		printf("gyro: %f %f %f\n", jc->gyro.roll, jc->gyro.pitch, jc->gyro.yaw);		
 	}
 
 
