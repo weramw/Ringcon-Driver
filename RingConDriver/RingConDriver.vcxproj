@@ -137,6 +137,7 @@
     <ClCompile Include="JoyCon.cpp" />
     <ClCompile Include="JoyConLeft.cpp" />
     <ClCompile Include="JoyConRight.cpp" />
+    <ClCompile Include="RingCon.cpp" />
     <ClCompile Include="RingConDriver.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -147,6 +148,7 @@
     <ClInclude Include="JoyCon.h" />
     <ClInclude Include="JoyConLeft.h" />
     <ClInclude Include="JoyConRight.h" />
+    <ClInclude Include="RingCon.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

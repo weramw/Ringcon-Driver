@@ -40,12 +40,15 @@ public:
 	JoyCon(hid_device_info* dev_info); //opens handle
 	~JoyCon(); // closes handle
 
+	// needs to be called after construction!
+	virtual void initialize();
+
 	// reads all available data from device
 	void update(bool verbose=true);
 
 	// prints joycon stats
 	// return no lines printed
-	int printStats() const;
+	virtual int printStats() const;
 
 	std::string getName() const;
 	std::string getStringForType() const;
@@ -64,13 +67,14 @@ public:
 
 protected:
 	static const int _bluetooth_data_offset;
-	static const uint8_t _mcu_crc8_table[256];
-	static const uint8_t _ringmcu_crc8_table[256];
 
-	uint8_t mcu_crc8_calc(uint8_t* buffer, uint8_t size) const;
-	uint8_t ringmcu_crc8_calc(uint8_t* buffer, uint8_t size) const;
-
-	void initialize();
+	// init functions
+	void enableVibration();
+	void enableIMU();
+	void setStandardReportMode();
+	void getCalibrationData();
+	void setStandardPlayerLEDs();
+	void smallRumble();
 
 	// write data to device
 	// returns True on success
@@ -82,7 +86,7 @@ protected:
 	
 	bool parseData(const std::vector<uint8_t>& data);
 
-	void parseDataWithIMU(const std::vector<uint8_t>& data);
+	virtual void parseDataWithIMU(const std::vector<uint8_t>& data);
 
 	virtual void parseButtonsState(const std::vector<uint8_t>& data) = 0;
 	virtual int getStickDataOffset() const = 0;
@@ -95,9 +99,6 @@ protected:
 	wchar_t* _serial;
 	std::string _name;
 	TYPE _type;
-
-	bool _ringconAttached;
-	int _ringcon;
 
 	int _read_timeout;
 

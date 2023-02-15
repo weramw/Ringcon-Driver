@@ -299,6 +299,12 @@ public:
 			memcpy(buf + (bluetooth ? 0x1 : 0x9), data, len);
 		}
 
+		printf("Sending command:\n");
+		for (size_t i = 0; i < 64; ++i) {
+			printf("%d ", buf[i]);
+		}
+		printf("\n");
+
 		hid_exchange(this->handle, buf, len + (bluetooth ? 0x1 : 0x9));
 
 		if (data) {
@@ -523,11 +529,11 @@ public:
 			buf[13] = c;
 			buf[14] = d;
 
-			/*for (int i = 0; i <= 48; i++) {
-				printf("%i: %02x ", i, buf[i]);
+			for (int i = 0; i <= 48; i++) {
+				printf("%d ", buf[i]);
 			}
 			printf("\n");
-			printf("\n");*/
+			printf("\n");
 
 			res = hid_write(handle, buf, output_buffer_length);
 			int retries = 0;
@@ -550,7 +556,7 @@ public:
 			while (1) {
 				res = hid_read_timeout(handle, buf, sizeof(buf), 64);
 				//for (int i = 0; i <= 60; i++) {
-				//	printf("%i: %02x ", i, buf[i]);
+				//	printf("%d ", buf[i]);
 				//}
 				//printf("\n");
 				//printf("\n");
@@ -659,9 +665,12 @@ public:
 				}
 				printf("\n");
 				printf("\n");*/
-				if (*(u16*)&buf[0xD] == 0x2280)
-					goto step3;
+				printf("GOT FEEDBACK: %d %d", buf[13], buf[14]);
+				if (*(u16*)&buf[0xD] == 0x2280) {
+					printf("SUCCESS");
 
+					goto step3;
+				}
 				retries++;
 				if (retries > 8 || res == 0)
 					break;
@@ -734,10 +743,11 @@ public:
 			//pkt->subcmd_21_21.mcu_mode = 0x03; // MCU mode - 1: Standby, 4: NFC, 5: IR, 6: Initializing/FW Update?
 
 			buf[48] = mcu_crc8_calc(buf + 12, 36);
-			/*for (int i = 0; i <= 48; i++) {
-				printf("%i: %02x ", i, buf[i]);
+			printf("Sending MUC polling...\n");
+			for (int i = 0; i < 49; i++) {
+				printf("%d ", buf[i]);
 			}
-			printf("\n");*/
+			printf("\n");
 
 			res = hid_write(handle, buf, output_buffer_length);
 			int retries = 0;
@@ -826,11 +836,12 @@ public:
 
 			buf[48] = mcu_crc8_calc(buf + 12, 36);
 
-			/*for (int i = 0; i <= 48; i++) {
-				printf("%i: %02x ", i, buf[i]);
+			printf("set MCU mode...\n");
+			for (int i = 0; i < 49; i++) {
+				printf("%d ", buf[i]);
 			}
 			printf("\n");
-			printf("\n");*/
+			printf("\n");
 
 			res = hid_write(handle, buf, output_buffer_length);
 			int retries = 0;
@@ -869,11 +880,12 @@ public:
 			timing_byte++;
 			buf[10] = 0x59;
 
-			/*for (int i = 0; i <= 48; i++) {
-				printf("%i: %02x ", i, buf[i]);
+			printf("sending:\n");
+			for (int i = 0; i <= 48; i++) {
+				printf("%d ", buf[i]);
 			}
 			printf("\n");
-			printf("\n");*/
+			printf("\n");
 
 			res = hid_write(handle, buf, output_buffer_length);
 			int retries = 0;
@@ -987,11 +999,11 @@ public:
 			//21/10/20  92 6 3 37 6 0 0 0 0 28 22 205 166 43 0 0 0 197 20 147 187 160 13 0 0 4 0 0 0 0 0 0 0 144 168 193 166 43 0
 			//08/10/20  92 6 3 37 6 0 0 0 0 28 22 237 52  54 0 0 0 10 100  11 230 169 34 0 0 4 0 0 0 0 0 0 0 144 168 225 52  54 0
  
-  			/*for (int i = 0; i <= 48; i++) {
-				printf("%i: %02x ", i, buf[i]);
+  			for (int i = 0; i < 49; i++) {
+				printf("%d ", buf[i]);
 			}
 			printf("\n");
-			printf("\n");*/
+			printf("\n");
 
 			res = hid_write(handle, buf, output_buffer_length);
 			int retries = 0;
@@ -1037,11 +1049,11 @@ public:
 			buf[13] = 0x01;
 			buf[14] = 0x02;
 
-			/*for (int i = 0; i <= 48; i++) {
-				printf("%i: %02x ", i, buf[i]);
+			for (int i = 0; i <= 48; i++) {
+				printf("%d ", buf[i]);
 			}
 			printf("\n");
-			printf("\n");*/
+			printf("\n");
 
 			res = hid_write(handle, buf, output_buffer_length);
 			int retries = 0;
