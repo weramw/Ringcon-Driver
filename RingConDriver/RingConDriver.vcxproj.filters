@@ -42,6 +42,9 @@
     <ClCompile Include="RingCon.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="VJoyController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Driver.h">
@@ -66,6 +69,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RingCon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VJoyController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

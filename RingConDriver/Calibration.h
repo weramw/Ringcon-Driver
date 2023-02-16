@@ -46,13 +46,6 @@ protected:
 	bool _is_left;
 	int _timing_byte;
 	
-	//float _x, _y;
-	//Eigen::Vector3f _accel_coeff, _gyro_coeff;
-
-	//uint16_t _factory_imu_calm[0xC];
-	//uint16_t _user_imu_calm[0xC];
-	//int16_t _imu[0x2][0x3];
-
 	Eigen::Vector3i _stick_x, _stick_y; // min, center, max
 	Eigen::Matrix<int, 2, 3> _imu; // raw accel, gyro position
 	Eigen::Vector3f _accel, _gyro; // accel, gyro position for proper units
