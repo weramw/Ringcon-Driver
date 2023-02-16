@@ -12,6 +12,8 @@
 #include "IOHelper.h"
 #include "Calibration.h"
 
+#include "JoyData.h"
+
 class JoyCon
 {
 public:
@@ -61,6 +63,8 @@ public:
 	Eigen::Vector2i getStickRaw() const;
 	Eigen::Vector3i getAccelRaw() const;
 	Eigen::Vector3i getGyroRaw() const;
+
+	virtual JoyData getData() const;
 
 	void setPlayerLED(std::array<LIGHT, 4> values);
 	void rumble(uint8_t frequency, RUMBLE_INTENSITY intensity);

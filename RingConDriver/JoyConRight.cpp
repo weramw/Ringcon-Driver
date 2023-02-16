@@ -70,3 +70,22 @@ JoyConRight::ButtonsState JoyConRight::getButtonsState() const
 {
 	return _buttons_state;
 }
+
+JoyData JoyConRight::getData() const
+{
+	JoyData data = JoyCon::getData();
+
+	data.buttons[0] = _buttons_state.Y;
+	data.buttons[1] = _buttons_state.X;
+	data.buttons[2] = _buttons_state.B;
+	data.buttons[3] = _buttons_state.A;
+	data.buttons[4] = _buttons_state.SR;
+	data.buttons[5] = _buttons_state.SL;
+	data.buttons[6] = _buttons_state.R;
+	data.buttons[7] = _buttons_state.ZR;
+	data.buttons[8] = _buttons_state.PLUS;
+	data.buttons[9] = _buttons_state.STICK;
+	data.buttons[10] = _buttons_state.HOME;
+
+	return data;
+}

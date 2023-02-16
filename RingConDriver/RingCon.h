@@ -14,6 +14,8 @@ public:
 	Eigen::Vector3f getGyroRing() const;
 
 	Eigen::Vector3i getGyroRingRaw() const;
+
+	virtual JoyData getData() const override;
 	
 protected:
 

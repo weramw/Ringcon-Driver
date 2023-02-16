@@ -71,3 +71,22 @@ JoyConLeft::ButtonsState JoyConLeft::getButtonsState() const
 {
 	return _buttons_state;
 }
+
+JoyData JoyConLeft::getData() const
+{
+	JoyData data = JoyCon::getData();
+
+	data.buttons[0] = _buttons_state.DOWN;
+	data.buttons[1] = _buttons_state.UP;
+	data.buttons[2] = _buttons_state.RIGHT;
+	data.buttons[3] = _buttons_state.LEFT;
+	data.buttons[4] = _buttons_state.SR;
+	data.buttons[5] = _buttons_state.SL;
+	data.buttons[6] = _buttons_state.L;
+	data.buttons[7] = _buttons_state.ZL;
+	data.buttons[8] = _buttons_state.MINUS;
+	data.buttons[9] = _buttons_state.STICK;
+	data.buttons[10] = _buttons_state.CAPTURE;
+
+	return data;
+}

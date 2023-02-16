@@ -112,6 +112,16 @@ Eigen::Vector3i JoyCon::getGyroRaw() const
 	return _gyro;
 }
 
+JoyData JoyCon::getData() const
+{
+	JoyData data;
+
+	data.stick = getStick();
+	data.accel = getAccel();
+	data.gyro = getGyro();
+
+	return data;
+}
 
 void JoyCon::initialize()
 {

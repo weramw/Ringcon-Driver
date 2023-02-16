@@ -137,6 +137,7 @@
     <ClCompile Include="JoyCon.cpp" />
     <ClCompile Include="JoyConLeft.cpp" />
     <ClCompile Include="JoyConRight.cpp" />
+    <ClCompile Include="JoyData.cpp" />
     <ClCompile Include="RingCon.cpp" />
     <ClCompile Include="RingConDriver.cpp" />
     <ClCompile Include="VJoyController.cpp" />
@@ -149,6 +150,7 @@
     <ClInclude Include="JoyCon.h" />
     <ClInclude Include="JoyConLeft.h" />
     <ClInclude Include="JoyConRight.h" />
+    <ClInclude Include="JoyData.h" />
     <ClInclude Include="RingCon.h" />
     <ClInclude Include="VJoyController.h" />
   </ItemGroup>

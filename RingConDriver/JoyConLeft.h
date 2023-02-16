@@ -34,6 +34,8 @@ public:
 
     ButtonsState getButtonsState() const;
 
+    virtual JoyData getData() const override;
+
 protected:
     ButtonsState _buttons_state;
 };

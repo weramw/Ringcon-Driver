@@ -153,6 +153,14 @@ Eigen::Vector3i RingCon::getGyroRingRaw() const
 	return _gyro_ring;
 }
 
+JoyData RingCon::getData() const
+{
+	JoyData data = JoyConRight::getData();
+	if (_hasRingCon) {
+		data.ring_flex = _flex;
+	}
+	return data;
+}
 
 bool RingCon::enableMCU()
 {
