@@ -5,8 +5,8 @@
 
 VJoyController::VJoyController(UINT device_id) :
 	_device_id(device_id),
-	_vendor_id(""),
-	_product_id(""),
+	_vendor_id(),
+	_product_id(),
 	_status(0),
 	_X(0),
 	_Y(0),
@@ -34,8 +34,10 @@ bool VJoyController::initialize()
 		return false;
 	}
 
-	_vendor_id = static_cast<char*>(GetvJoyManufacturerString());
-	_product_id = static_cast<char*>(GetvJoyProductString()); //GetvJoySerialNumberString()
+	wprintf(L"Vendor: %s\nProduct :%s\nVersion Number:%s\n", static_cast<TCHAR*> (GetvJoyManufacturerString()), static_cast<TCHAR*>(GetvJoyProductString()), static_cast<TCHAR*>(GetvJoySerialNumberString()));
+
+	_vendor_id = static_cast<TCHAR*>(GetvJoyManufacturerString());
+	_product_id = static_cast<TCHAR*>(GetvJoyProductString()); //GetvJoySerialNumberString()
 
 	std::cout << "Trying to acquire device with VID " << _vendor_id << " and PID " << _product_id << "..." << std::endl;
 

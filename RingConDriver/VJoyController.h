@@ -41,7 +41,7 @@ protected:
 
 	int _status;
 
-	std::string _vendor_id, _product_id;
+	TCHAR *_vendor_id, *_product_id;
 
 	USHORT _X, _Y, _Z;
 	LONG   _Btns;
