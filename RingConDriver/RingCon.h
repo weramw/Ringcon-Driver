@@ -11,6 +11,7 @@ public:
 
 	virtual int printStats() const override;
 
+	int getFlex() const;
 	Eigen::Vector3f getGyroRing() const;
 
 	Eigen::Vector3i getGyroRingRaw() const;

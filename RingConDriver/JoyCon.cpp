@@ -15,11 +15,9 @@ JoyCon::JoyCon(hid_device_info* dev_info) :
 	_serial(nullptr),
 	_name("UNKOWN"),
 	_type(UNKOWN),
-	_read_timeout(3),
-	_global_count(0), // TODO: ???
-	//_stick_x(0),
-	//_stick_y(0),
-	//_battery(0),
+	_receive_data_thread(nullptr),
+	_stop_receiving(false),
+	_timing_byte(0),
 	_stick(Eigen::Vector2i::Zero()),
 	_accel(Eigen::Vector3i::Zero()),
 	_gyro(Eigen::Vector3i::Zero()),
@@ -86,30 +84,41 @@ std::string JoyCon::getStringForType() const
 
 Eigen::Vector2f JoyCon::getStick() const
 {
-	return _calibration->stick(_stick);
+	return _calibration->stick(getStickRaw());
 }
 
 Eigen::Vector3f JoyCon::getAccel() const
 {
-	return _calibration->accel(_accel);
+	return _calibration->accel(getAccelRaw());
 }
 
 Eigen::Vector3f JoyCon::getGyro() const
 {
-	return _calibration->gyro(_gyro);
+	return _calibration->gyro(getGyroRaw());
 }
 
 Eigen::Vector2i JoyCon::getStickRaw() const
 {
-	return _stick;
+	_mtx_data.lock();
+	Eigen::Vector2i res = _stick;
+	_mtx_data.unlock();
+	return res;
 }
+
 Eigen::Vector3i JoyCon::getAccelRaw() const
 {
-	return _accel;
+	_mtx_data.lock();
+	Eigen::Vector3i res = _accel;
+	_mtx_data.unlock();
+	return res;
 }
+
 Eigen::Vector3i JoyCon::getGyroRaw() const
 {
-	return _gyro;
+	_mtx_data.lock();
+	Eigen::Vector3i res = _gyro;
+	_mtx_data.unlock();
+	return res;
 }
 
 JoyData JoyCon::getData() const
@@ -215,52 +224,6 @@ void JoyCon::rumble(uint8_t frequency, RUMBLE_INTENSITY intensity)
 	hid_set_nonblocking(_handle, 0);
 }
 
-void JoyCon::update(bool verbose)
-{
-	if (_handle == nullptr) {
-		return;
-	}
-
-	std::vector<uint8_t> data(65, 0); // 64+1 
-	int len_data = hid_read_timeout(_handle, &(data[0]), 64, _read_timeout); // 10ms timeout
-	if (len_data <= 0) {
-		//std::cout << getStringForType() << ": No data to read!" << std::endl;
-		return;
-	}
-	if (len_data != 64) {
-		std::cout << getStringForType() << ": Got invalid len_data " << len_data << " -> IGNORE!" << std::endl;
-		return;
-	}
-
-	//std::cout << "Got " << len_data << " bytes of data." << std::endl;
-	//std::cout << _name << ": before parse - data[0] = " << int(data[0]) << std::endl;
-
-	bool success = parseData(data);
-	//std::cout << _name << ": after parse - data[0] = " << int(data[0]) << std::endl;
-	if (verbose && success) {
-		//if (_type == LEFT) {
-		//	std::cout << "l" << std::flush;
-		//} else if (_type == RIGHT) {
-		//	std::cout << "r" << std::flush;
-		//}
-		//else {
-		//	std::cout << "x" << std::flush;
-		//}
-		// TODO: print data
-		//std::cout << _name << " - Accel: " << _accel.transpose() << std::endl;
-		//std::cout << _name << " - Gyro: " << _gyro.transpose() << std::endl;
-		//if (_type == RIGHT) {
-		//	std::cout << _name << ": " << getButtonsStateAsString() << std::endl;
-		//}
-		
-		//std::cout << _name << ": data[0] = " << int(data[0]) << std::endl; 
-		//std::cout << _name << ": X,Y \t" << toString(_stick) << "\t\t(" << toString(stick_cal) << ")" << std::endl;
-		//std::cout << _name << ": accel \t" << toString(_accel) << "\t(" << toString(accel_cal) << ")" << std::endl;
-		//std::cout << _name << ": gyro \t" << toString(_gyro) << "\t(" << toString(gyro_cal) << ")" << std::endl;
-		//std::cout << _name << ": gyro packets: " << int(data[19]) << " " << int(data[20]) << " | " << int(data[21]) << " " << int(data[22]) << " | " << int(data[23]) << " " << int(data[24]) << std::endl;
-	}
-}
-
 int JoyCon::printStats() const
 {
 	Eigen::Vector2f stick_cal = getStick();
@@ -268,9 +231,9 @@ int JoyCon::printStats() const
 	Eigen::Vector3f gyro_cal = getGyro();
 
 	std::cout << _name << std::endl;
-	std::cout << "stick \t\t" << _io_helper.toString(stick_cal) << "\t\t (" << _io_helper.toString(_stick) << ")" << std::endl;
-	std::cout << "accel \t\t" << _io_helper.toString(accel_cal) << "\t (" << _io_helper.toString(_accel) << ")" << std::endl;
-	std::cout << "gyro \t\t" << _io_helper.toString(gyro_cal) << "\t (" << _io_helper.toString(_gyro) << ")" << std::endl;
+	std::cout << "stick \t\t" << _io_helper.toString(stick_cal) << "\t\t (" << _io_helper.toString(getStickRaw()) << ")" << std::endl;
+	std::cout << "accel \t\t" << _io_helper.toString(accel_cal) << "\t (" << _io_helper.toString(getAccelRaw()) << ")" << std::endl;
+	std::cout << "gyro \t\t" << _io_helper.toString(gyro_cal) << "\t (" << _io_helper.toString(getGyroRaw()) << ")" << std::endl;
 	return 4;
 }
 
@@ -324,12 +287,12 @@ bool JoyCon::sendCommand(uint8_t command, const std::vector<unsigned char>& data
 bool JoyCon::sendSubCommand(uint8_t command, uint8_t subcommand, const std::vector<uint8_t>& data)
 {
 	std::vector<uint8_t> buffer;	
-	std::vector<uint8_t> rumble_base = { uint8_t(++_global_count & 0xF), 0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40 };
+	std::vector<uint8_t> rumble_base = { uint8_t(++_timing_byte & 0xF), 0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40 };
 
 	buffer.insert(buffer.end(), rumble_base.begin(), rumble_base.end()); // set index 0-8 of buffer
 	
-	if (_global_count > 0xF) {
-		_global_count = 0x0;
+	if (_timing_byte > 0xF) {
+		_timing_byte = 0x0;
 	}
 
 	// set neutral rumble base only if the command is vibrate (0x01)
@@ -348,8 +311,6 @@ bool JoyCon::sendSubCommand(uint8_t command, uint8_t subcommand, const std::vect
 
 bool JoyCon::parseData(const std::vector<uint8_t>& data)
 {
-	// TOOD: parse data
-
 	//std::cout << " in parse data[0]: " << int(data[0]) << std::endl;
 	bool success = false;
 	switch (data[0]) {
@@ -397,4 +358,87 @@ void JoyCon::parseDataWithIMU(const std::vector<uint8_t>& data)
 	_gyro.x() = byte_conversions::combine_2bytesIMULive(data[19], data[20]);
 	_gyro.y() = byte_conversions::combine_2bytesIMULive(data[21], data[22]);
 	_gyro.z() = byte_conversions::combine_2bytesIMULive(data[23], data[24]);
+}
+
+void JoyCon::startReceiving()
+{	
+	if (_receive_data_thread != nullptr) {
+		printf("%s: already receiving data!\n", _name.c_str());
+		return;
+	}
+
+	// start listening to data
+	_stop_receiving = false;
+	_receive_data_thread = new std::thread(&JoyCon::receiveData, this);
+	printf("%s: started receiving data!\n", _name.c_str());
+}
+
+void JoyCon::stopReceiving()
+{
+	_stop_receiving = true;
+
+	if (_receive_data_thread == nullptr) {
+		printf("%s: not receiving data!\n", _name.c_str());
+		return;
+	}
+
+	// wait for _receive_data_thread to finish
+	printf("%s: Waiting for receive thread to finish...\n", _name.c_str());
+	_receive_data_thread->join();
+	printf("%s: Read thread done.\n", _name.c_str());
+	delete _receive_data_thread;
+}
+
+void JoyCon::receiveData()
+{
+	bool verbose = true;
+	while (!_stop_receiving) {
+		if (_handle == nullptr) {
+			printf("ERROR receiving Data - no handle!\n");
+			_stop_receiving = true;
+			break;
+		}
+
+		std::vector<uint8_t> data(65, 0); // 64+1 
+		int len_data = hid_read(_handle, &(data[0]), 64);
+		if (len_data <= 0) {
+			//std::cout << getStringForType() << ": No data to read!" << std::endl;
+			continue;
+		}
+		if (len_data != 64) {
+			std::cout << getStringForType() << ": Got invalid len_data " << len_data << " -> IGNORE!" << std::endl;
+			continue;
+		}
+
+		//std::cout << "x" << std::flush;
+		//std::cout << "Got " << len_data << " bytes of data." << std::endl;
+		//std::cout << _name << ": before parse - data[0] = " << int(data[0]) << std::endl;
+
+		_mtx_data.lock();
+		bool success = parseData(data);
+		////std::cout << _name << ": after parse - data[0] = " << int(data[0]) << std::endl;
+		if (verbose && success) {
+		//	//if (_type == LEFT) {
+		//	//	std::cout << "l" << std::flush;
+		//	//} else if (_type == RIGHT) {
+		//	//	std::cout << "r" << std::flush;
+		//	//}
+		//	//else {
+		//	//	std::cout << "x" << std::flush;
+		//	//}
+		//	// TODO: print data
+		//	//std::cout << _name << " - Accel: " << _accel.transpose() << std::endl;
+		//	//std::cout << _name << " - Gyro: " << _gyro.transpose() << std::endl;
+		//	//if (_type == RIGHT) {
+		//	//	std::cout << _name << ": " << getButtonsStateAsString() << std::endl;
+		//	//}
+
+		//	//std::cout << _name << ": data[0] = " << int(data[0]) << std::endl; 
+		//	//std::cout << _name << ": X,Y \t" << toString(_stick) << "\t\t(" << toString(stick_cal) << ")" << std::endl;
+		//	//std::cout << _name << ": accel \t" << toString(_accel) << "\t(" << toString(accel_cal) << ")" << std::endl;
+		//	//std::cout << _name << ": gyro \t" << toString(_gyro) << "\t(" << toString(gyro_cal) << ")" << std::endl;
+		//	//std::cout << _name << ": gyro packets: " << int(data[19]) << " " << int(data[20]) << " | " << int(data[21]) << " " << int(data[22]) << " | " << int(data[23]) << " " << int(data[24]) << std::endl;
+		}
+		_mtx_data.unlock();
+	}
 }

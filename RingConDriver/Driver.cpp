@@ -41,24 +41,17 @@ void Driver::disconnect()
 
 void Driver::update()
 {
-	if (_joycon_right != nullptr) {
-		_joycon_right->update();
-	}
-	if (_joycon_left != nullptr) {
-		_joycon_left->update();
-	}
-
-	//std::cout << "." << std::flush;
-	std::cout << "\x1b[" << _lines_printed << "A"; // move up n lines
-	std::cout << "\x1b[" << _lines_printed << "M"; // delete last n lines
-	
-	_lines_printed = 0;
-	if (_joycon_left != nullptr) {
-		_lines_printed += _joycon_left->printStats();
-	}
-	if (_joycon_right != nullptr) {
-		_lines_printed += _joycon_right->printStats();
-	}
+	////std::cout << "." << std::flush;
+	//std::cout << "\x1b[" << _lines_printed << "A"; // move up n lines
+	//std::cout << "\x1b[" << _lines_printed << "M"; // delete last n lines
+	//
+	//_lines_printed = 0;
+	//if (_joycon_left != nullptr) {
+	//	_lines_printed += _joycon_left->printStats();
+	//}
+	//if (_joycon_right != nullptr) {
+	//	_lines_printed += _joycon_right->printStats();
+	//}
 
 	// send joyCon data
 	if (_vjoy_left != nullptr) {
@@ -89,6 +82,7 @@ bool Driver::is_connected_joy_cons() const
 bool Driver::is_connected_v_joy_controller() const
 {
 	return (_vjoy_left != nullptr) && (_vjoy_right != nullptr);
+	//return (_vjoy_left != nullptr);
 }
 
 void Driver::connectJoyCons()
@@ -108,6 +102,7 @@ void Driver::connectJoyCons()
 				std::cout << "Found left Joycon" << std::endl;
 				_joycon_left = new JoyConLeft(cur_dev);
 				_joycon_left->initialize();
+				_joycon_left->startReceiving();
 			}
 			break;
 		case JoyCon::PRODUCT_ID_RIGHT:
@@ -117,6 +112,7 @@ void Driver::connectJoyCons()
 				//_joycon_right->initialize();
 				_joycon_right = new RingCon(cur_dev);
 				_joycon_right->initialize();
+				_joycon_right->startReceiving();
 			}
 			break;
 		default:
@@ -149,6 +145,7 @@ void Driver::connectVJoyController()
 void Driver::disconnectJoyCons()
 {
 	if (_joycon_left != nullptr) {
+		_joycon_left->stopReceiving();
 		delete _joycon_left;
 		std::cout << "closed left JoyCon..." << std::flush;
 	}
@@ -156,6 +153,7 @@ void Driver::disconnectJoyCons()
 		std::cout << "No left JoyCon connected...";
 	}
 	if (_joycon_right != nullptr) {
+		_joycon_right->stopReceiving();
 		delete _joycon_right;
 		std::cout << "closed right JoyCon..." << std::flush;
 	}

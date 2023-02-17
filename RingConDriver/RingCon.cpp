@@ -137,9 +137,18 @@ int RingCon::printStats() const
 
 	Eigen::Vector3f gyro_ring_cal = getGyroRing();
 
-	std::cout << "ring gyro\t" << _io_helper.toString(gyro_ring_cal) << "\t (" << _io_helper.toString(_gyro_ring) << ")" << std::endl;
-	std::cout << "ring press\t" << _io_helper.intToString(_flex) << std::endl;
+	std::cout << "ring gyro\t" << _io_helper.toString(gyro_ring_cal) << "\t (" << _io_helper.toString(getGyroRingRaw()) << ")" << std::endl;
+	std::cout << "ring press\t" << _io_helper.intToString(getFlex()) << std::endl;
+
 	return lines_printed+2;
+}
+
+int RingCon::getFlex() const
+{
+	_mtx_data.lock();
+	int res = _flex;
+	_mtx_data.unlock();
+	return res;
 }
 
 Eigen::Vector3f RingCon::getGyroRing() const
@@ -150,7 +159,10 @@ Eigen::Vector3f RingCon::getGyroRing() const
 
 Eigen::Vector3i RingCon::getGyroRingRaw() const
 {
-	return _gyro_ring;
+	_mtx_data.lock();
+	Eigen::Vector3i res = _gyro_ring;
+	_mtx_data.unlock();
+	return res;
 }
 
 JoyData RingCon::getData() const

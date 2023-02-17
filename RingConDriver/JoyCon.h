@@ -4,6 +4,8 @@
 #include <vector>
 #include <array>
 #include <stdint.h>
+#include <thread>
+#include <mutex>
 
 #include <hidapi.h>
 
@@ -45,8 +47,9 @@ public:
 	// needs to be called after construction!
 	virtual void initialize();
 
-	// reads all available data from device
-	void update(bool verbose=true);
+	// call this to start and stop listening to data from device
+	void startReceiving();
+	void stopReceiving();
 
 	// prints joycon stats
 	// return no lines printed
@@ -96,6 +99,8 @@ protected:
 	virtual int getStickDataOffset() const = 0;
 	virtual std::string getButtonsStateAsString() const = 0;
 
+	virtual void receiveData();
+
 protected:
 	hid_device* _handle;
 	Calibration* _calibration;
@@ -104,13 +109,10 @@ protected:
 	std::string _name;
 	TYPE _type;
 
-	int _read_timeout;
-
-	uint8_t _global_count; // same as timing byte, response order for hid device
-
-	//uint16_t _stick_x;
-	//uint16_t _stick_y;
-	//uint8_t _battery;
+	std::thread *_receive_data_thread;
+	std::atomic<bool> _stop_receiving;
+	mutable std::mutex _mtx_data;
+	uint8_t _timing_byte; // same as timing byte, response order for hid device
 
 	Eigen::Vector2i _stick;
 	Eigen::Vector3i _gyro;

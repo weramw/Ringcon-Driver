@@ -64,17 +64,22 @@ int JoyConLeft::getStickDataOffset() const
 
 std::string JoyConLeft::getButtonsStateAsString() const
 {
-	return _buttons_state.toString();
+	return getButtonsState().toString();
 }
 
 JoyConLeft::ButtonsState JoyConLeft::getButtonsState() const
 {
-	return _buttons_state;
+	_mtx_data.lock();
+	ButtonsState res = _buttons_state;
+	_mtx_data.unlock();
+	return res;
 }
 
 JoyData JoyConLeft::getData() const
 {
 	JoyData data = JoyCon::getData();
+
+	_mtx_data.lock();
 
 	data.buttons[0] = _buttons_state.DOWN;
 	data.buttons[1] = _buttons_state.UP;
@@ -88,5 +93,6 @@ JoyData JoyConLeft::getData() const
 	data.buttons[9] = _buttons_state.STICK;
 	data.buttons[10] = _buttons_state.CAPTURE;
 
+	_mtx_data.unlock();
 	return data;
 }
