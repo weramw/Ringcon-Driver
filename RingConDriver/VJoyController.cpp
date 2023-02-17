@@ -109,7 +109,7 @@ USHORT getAxisValue(float axis, float min_axis, float max_axis)
 	float scale = 1.f / (max_axis - min_axis);
 	axis = max(min_axis, min(max_axis, axis)); // clip
 	axis = scale*(axis-min_axis); // normalize
-	int axis_val = int(std::floor(axis * 35000.f));
+	int axis_val = int(std::floor(axis * 32768.f));
 	return USHORT(axis_val);
 }
 

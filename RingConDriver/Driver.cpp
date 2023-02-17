@@ -41,17 +41,17 @@ void Driver::disconnect()
 
 void Driver::update()
 {
-	////std::cout << "." << std::flush;
-	//std::cout << "\x1b[" << _lines_printed << "A"; // move up n lines
-	//std::cout << "\x1b[" << _lines_printed << "M"; // delete last n lines
-	//
-	//_lines_printed = 0;
-	//if (_joycon_left != nullptr) {
-	//	_lines_printed += _joycon_left->printStats();
-	//}
-	//if (_joycon_right != nullptr) {
-	//	_lines_printed += _joycon_right->printStats();
-	//}
+	//std::cout << "." << std::flush;
+	std::cout << "\x1b[" << _lines_printed << "A"; // move up n lines
+	std::cout << "\x1b[" << _lines_printed << "M"; // delete last n lines
+	
+	_lines_printed = 0;
+	if (_joycon_left != nullptr) {
+		_lines_printed += _joycon_left->printStats();
+	}
+	if (_joycon_right != nullptr) {
+		_lines_printed += _joycon_right->printStats();
+	}
 
 	// send joyCon data
 	if (_vjoy_left != nullptr) {
